@@ -1,0 +1,68 @@
+.config-page {
+  padding: 20px;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.config-title {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+/* toggle */
+.toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 0;
+}
+
+/* 🔘 switch base */
+.switch {
+  width: 50px;
+  height: 26.5px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.1); /* mais moderno que #444 */
+  border: 1px solid rgba(0, 0, 0, 0.1);
+
+  position: relative;
+  cursor: pointer;
+
+  transition: all var(--transition);
+}
+
+/* 🔥 ativo (dinâmico) */
+.switch.on {
+  background: var(--color-primary);
+
+  box-shadow:
+    0 0 10px var(--color-shadow),
+    0 0 20px var(--color-glow);
+}
+
+/* ⚪ bolinha */
+.thumb {
+  width: 20px;
+  height: 20px;
+
+  background: #fff;
+  border-radius: 50%;
+
+  position: absolute;
+  top: 2.8px;
+  left: 4px;
+
+  transition: all var(--transition);
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 👉 quando ativo */
+.switch.on .thumb {
+  left: 26px;
+}

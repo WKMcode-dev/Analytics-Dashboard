@@ -1,0 +1,215 @@
+/* ======================================================
+   SIDEBAR
+   ====================================================== */
+.sidebar {
+  width: 75px;
+  height: 100%;
+
+  display: flex;
+  justify-content: center;
+
+  backdrop-filter: blur(10px);
+  background: rgba(20, 20, 20, 0.8);
+
+  border-right: 2px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* ======================================================
+   MENU CONTAINER
+   ====================================================== */
+.menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 13px;
+  gap: 20px;
+}
+
+/* ======================================================
+   LINK (NavLink)
+   ====================================================== */
+.menu a {
+  position: relative;
+
+  width: 50px;
+  height: 50px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  text-decoration: none;
+  overflow: visible;
+}
+
+/* ======================================================
+   ITEM (BOTÃO)
+   ====================================================== */
+.menu a .item {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  font-size: 20px;
+  color: var(--color-muted);
+
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ✨ brilho */
+.menu a .item::before {
+  content: "";
+  position: absolute;
+
+  width: 200%;
+  height: 200%;
+
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.25),
+    transparent 70%
+  );
+
+  transform: translateX(-120%) rotate(25deg);
+  transition: transform 0.6s ease;
+}
+
+/* ======================================================
+   HOVER
+   ====================================================== */
+.menu a:hover .item::before {
+  transform: translateX(120%) rotate(25deg);
+}
+
+.menu a:hover .item {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-secondary)
+  );
+
+  color: #fff;
+
+  transform: translateY(-3px) scale(1.05);
+
+  box-shadow:
+    0 6px 18px var(--color-shadow),
+    0 0 10px var(--color-glow);
+}
+
+/* ======================================================
+   ACTIVE
+   ====================================================== */
+.menu a.active .item {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-secondary)
+  );
+
+  color: #fff;
+
+  transform: scale(0.95);
+
+  box-shadow:
+    0 6px 20px var(--color-shadow),
+    0 0 10px var(--color-glow),
+    inset 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+/* ======================================================
+   TOOLTIP
+   ====================================================== */
+.menu a span {
+  position: absolute;
+  left: 70px;
+  z-index: 9999;
+
+  background: var(--color-surface);
+  backdrop-filter: blur(10px);
+
+  color: var(--color-text);
+  font-size: 14px;
+
+  padding: 6px 10px;
+  border-radius: 6px;
+
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+
+  white-space: nowrap;
+
+  opacity: 0;
+  transform: translateX(-10px);
+  pointer-events: none;
+
+  transition: all 0.25s ease;
+
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 0 8px rgba(var(--color-primary-rgb), 0.25);
+}
+
+/* 🔺 seta */
+.menu a span::before {
+  content: "";
+  position: absolute;
+
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  border-width: 7px;
+  border-style: solid;
+  border-color: transparent var(--color-surface) transparent transparent;
+}
+
+/* mostrar tooltip */
+.menu a:hover span {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ======================================================
+   MOBILE
+   ====================================================== */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: 70px;
+
+    flex-direction: row;
+    align-items: center;
+
+    border-right: none;
+    border-top: 2px solid rgba(var(--color-primary-rgb), 0.2);
+
+    order: 2;
+  }
+
+  .menu {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+  }
+
+  .menu a {
+    width: 45px;
+    height: 45px;
+  }
+
+  .menu a span {
+    display: none;
+  }
+}
