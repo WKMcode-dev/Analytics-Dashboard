@@ -2,76 +2,86 @@
 
 import { useEffect, useState } from "react"
 import { fetchDashboardData } from "../../services/api"
-import { filtrarDados } from "../utils/filter"
-import { agruparDados } from "../utils/groupData"
+import { mapApiToChart } from "../utils/mapChartData"
+import type { ChartItem } from "../../types/ChartItem"
 
-export function useDashboardData() {
-  const [loading, setLoading] = useState(false)
-  const [chartData, setChartData] = useState<any>(null)
-  const [selectedDate, setSelectedDate] = useState("")
-  const [search, setSearch] = useState("")
-  const [rawData, setRawData] = useState<any[]>([])
-  const [prefixo, setPrefixo] = useState("")
+type Filters = {
+    linha: string
+    prefixo: string
+    sentido: "" | "IDA" | "VOLTA"
+}
 
-  // 📅 data padrão
-  useEffect(() => {
-    const hoje = new Date().toISOString().split("T")[0]
-    setSelectedDate(hoje)
-  }, [])
+export function useDashboardData(date: string) {
+    const [rawData, setRawData] = useState<any[]>([])
+    const [data, setData] = useState<ChartItem[]>([])
+    const [loading, setLoading] = useState(false)
 
-  // 🔄 busca API
-  useEffect(() => {
-    if (!selectedDate) return
+    const [filters, setFilters] = useState<Filters>({
+        linha: "",
+        prefixo: "",
+        sentido: ""
+    })
 
-    setLoading(true)
+    // 🔄 API
+    useEffect(() => {
+        if (!date) return
 
-    fetchDashboardData(selectedDate)
-      .then(setRawData)
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [selectedDate])
+        const load = async () => {
+            setLoading(true)
 
-  // 🔽 lista de prefixos disponíveis
-  const prefixosDisponiveis = Array.from(
-    new Set(
-      rawData
-        .map(item => item.PrefixoRealizado)
-        .filter(p => p && String(p).startsWith("44"))
-    )
-  ).sort()
+            try {
+                const apiData = await fetchDashboardData(date)
+                setRawData(apiData)
+            } catch (err) {
+                console.error(err)
+            } finally {
+                setLoading(false)
+            }
+        }
 
-  // 📊 processamento dos dados
-  useEffect(() => {
-    if (!rawData.length) {
-      setChartData(null)
-      return
+        load()
+    }, [date])
+
+    // 🔍 FILTROS
+    useEffect(() => {
+        if (!rawData.length) return
+
+        let filtered = [...rawData]
+
+        if (filters.linha) {
+            const s = filters.linha.toLowerCase()
+
+            filtered = filtered.filter((item) =>
+                item.NomeLinha?.toLowerCase().includes(s) ||
+                item.NumeroLinha?.toLowerCase().includes(s)
+            )
+        }
+
+        if (filters.prefixo) {
+            const s = filters.prefixo.toLowerCase()
+
+            filtered = filtered.filter((item) =>
+                item.PrefixoRealizado?.toLowerCase().includes(s) ||
+                item.PrefixoPrevisto?.toLowerCase().includes(s)
+            )
+        }
+
+        if (filters.sentido) {
+            filtered = filtered.filter(
+                (item) => item.SentidoText === filters.sentido
+            )
+        }
+
+        setData(mapApiToChart(filtered))
+    }, [rawData, filters])
+
+    return {
+        data,
+        loading,
+
+        filters,
+        setFilters,
+
+        rawData
     }
-
-    let filtrado = filtrarDados(rawData, search)
-
-    // 🚍 filtro por prefixo
-    if (prefixo) {
-      filtrado = filtrado.filter(
-        item =>
-          item.PrefixoRealizado === prefixo ||
-          item.PrefixoPrevisto === prefixo
-      )
-    }
-
-    const dados = agruparDados(filtrado)
-
-    setChartData(dados)
-  }, [rawData, search, prefixo]) // 👈 IMPORTANTE
-
-  return {
-    loading,
-    chartData,
-    selectedDate,
-    setSelectedDate,
-    search,
-    setSearch,
-    prefixo,
-    setPrefixo,
-    prefixosDisponiveis
-  }
 }

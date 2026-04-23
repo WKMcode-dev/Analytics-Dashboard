@@ -1,205 +1,107 @@
-// src/components/charts/BarChart.tsx
+// src\pages\components\charts\BarChart.tsx
+
 import ReactECharts from "echarts-for-react"
+import type { ChartItem } from "../../../types/ChartItem"
 
 type Props = {
-  labels: string[]
-  prefixo?: string
-  programado: number[]
-  realizado: number[]
-  diferencaKM: number[]
-  viagensProgramado: number[]
-  viagensRealizado: number[]
-  viagensDiferenca: number[]
-
-  inicioProgramado: number[]
-  inicioRealizado: number[]
-  fimProgramado: number[]
-  fimRealizado: number[]
+  data: ChartItem[]
 }
 
-export default function BarChart({
-  labels,
-  prefixo,
-  programado,
-  realizado,
-  diferencaKM,
-  viagensProgramado,
-  viagensRealizado,
-  viagensDiferenca,
-}: Props) {
-
-  // 🎨 cores padrão (centralizadas)
+export default function BarChart({ data }: Props) {
   const COLOR_PROGRAMADO = "#5470C6"
   const COLOR_REALIZADO = "#91CC75"
   const COLOR_POSITIVO = "#00ff88"
   const COLOR_NEGATIVO = "#ff4d4f"
+  const COLOR_NEUTRO = "#999"
 
-  // const formatTime = (seconds: number) => {
-  //   if (!seconds || isNaN(seconds)) return "--:--:--"
+  // 🔥 regra única (fonte da verdade)
+  const isNaoRealizado = (item: ChartItem) =>
+    (item.kmRealizado === 0 && item.kmProgramado > 0)
 
-  //   const h = Math.floor(seconds / 3600)
-  //   const m = Math.floor((seconds % 3600) / 60)
-  //   const s = Math.floor(seconds % 60)
+  const labels = data.map((d) => d.label)
 
-  //   return `${h.toString().padStart(2, "0")}:${m
-  //     .toString()
-  //     .padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-  // }
+  const programado = data.map((d) => d.kmProgramado)
+  const realizado = data.map((d) => d.kmRealizado)
+
+  const diferenca = data.map((d) => {
+    if (isNaoRealizado(d)) return 0
+    return d.kmRealizado - d.kmProgramado
+  })
 
   const option = {
-
-    // 🔥 garante cores iguais na legenda
-    color: [
-      COLOR_PROGRAMADO,
-      COLOR_REALIZADO,
-      COLOR_POSITIVO
-    ],
+    color: [COLOR_PROGRAMADO, COLOR_REALIZADO],
 
     tooltip: {
       trigger: "axis",
-      backgroundColor: "#111",
-      borderColor: "#333",
-      textStyle: { color: "#fff" },
-
       formatter: (params: any) => {
-        try {
-          const i = params?.[0]?.dataIndex ?? 0
+        const i = params[0].dataIndex
+        const item = data[i]
 
-          const safe = (v: any) =>
-            typeof v === "number" && !isNaN(v) ? v : 0
+        const naoRodou = isNaoRealizado(item)
+        const diff = naoRodou ? 0 : item.kmRealizado - item.kmProgramado
 
-          const kmP = safe(programado[i])
-          const kmR = safe(realizado[i])
-          const kmD = safe(diferencaKM[i])
+        const color = naoRodou
+          ? COLOR_NEUTRO
+          : diff >= 0
+            ? COLOR_POSITIVO
+            : COLOR_NEGATIVO
 
-          const vP = safe(viagensProgramado?.[i])
-          const vR = safe(viagensRealizado?.[i])
-          const vD = safe(viagensDiferenca?.[i])
-
-          const diffColor =
-            kmD >= 0 ? COLOR_POSITIVO : COLOR_NEGATIVO
-
-          const diffColorViagem =
-            vD >= 0 ? COLOR_POSITIVO : COLOR_NEGATIVO
-
-          const prefixoInfo = prefixo
-            ? `<span style="color:${COLOR_REALIZADO}">🚍 ${prefixo}</span><br/><br/>`
-            : ""
-
-          return `
-      <b>${labels[i] ?? "-"}</b><br/>
-      ${prefixoInfo}
-
-      📊 <b>KM</b><br/>
-      Programado: <span style="color:${COLOR_PROGRAMADO}">
-        ${kmP.toFixed(2)}
-      </span><br/>
-
-      Realizado: <span style="color:${COLOR_REALIZADO}">
-        ${kmR.toFixed(2)}
-      </span><br/>
-
-      Diferença: <b style="color:${diffColor}">
-        ${kmD.toFixed(2)}
-      </b><br/><br/>
-
-      🚍 <b>Viagens</b><br/>
-      Programado: <span style="color:${COLOR_PROGRAMADO}">
-        ${vP}
-      </span><br/>
-
-      Realizado: <span style="color:${COLOR_REALIZADO}">
-        ${vR}
-      </span><br/>
-
-      Diferença: <b style="color:${diffColorViagem}">
-        ${vD}
-      </b><br/><br/>
-    `
-        } catch (err) {
-          console.error("Erro na tooltip:", err)
-          return "Erro ao carregar tooltip"
-        }
+        return `
+          <b>${item.label}</b><br/>
+          Programado: ${item.kmProgramado.toFixed(2)}<br/>
+          Realizado: ${item.kmRealizado.toFixed(2)}<br/>
+          Diferença: <b style="color:${color}">
+            ${naoRodou ? "Não realizado" : diff.toFixed(2)}
+          </b>
+        `
       }
-    },
-
-    grid: {
-      left: 40,
-      right: 20,
-      bottom: 90,
-      top: 60
     },
 
     legend: {
-      data: ["Programado", "Realizado", "Diferença"],
-      top: 10,
-      left: "center",
-      itemWidth: 14,
-      itemHeight: 10,
-      textStyle: {
-        fontSize: 12
-      }
+      data: ["Programado", "Realizado", "Diferença"]
     },
-
-    dataZoom: [
-      {
-        type: "slider",
-        height: 25,
-        bottom: 15
-      },
-      {
-        type: "inside"
-      }
-    ],
 
     xAxis: {
       type: "category",
       data: labels,
       axisLabel: {
-        rotate: labels.length > 8 ? 30 : 0
+        rotate: labels.length > 6 ? 30 : 0
       }
     },
 
     yAxis: {
-      type: "value",
+      type: "value"
     },
 
     series: [
       {
         name: "Programado",
         type: "bar",
-        data: programado,
-        itemStyle: {
-          color: COLOR_PROGRAMADO
-        },
-        barMaxWidth: 40
+        data: programado
       },
       {
         name: "Realizado",
         type: "bar",
-        data: realizado,
-        itemStyle: {
-          color: COLOR_REALIZADO
-        },
-        barMaxWidth: 40
+        data: realizado
       },
       {
         name: "Diferença",
         type: "bar",
+        data: diferenca.map((v, i) => {
+          const item = data[i]
+          const naoRodou = isNaoRealizado(item)
 
-        // 👇 cor base da legenda
-        itemStyle: {
-          color: COLOR_NEGATIVO
-        },
-
-        data: diferencaKM.map((v) => ({
-          value: v,
-          itemStyle: {
-            color: v >= 0 ? COLOR_POSITIVO : COLOR_NEGATIVO
+          return {
+            value: v,
+            itemStyle: {
+              color: naoRodou
+                ? COLOR_NEUTRO
+                : v >= 0
+                  ? COLOR_POSITIVO
+                  : COLOR_NEGATIVO
+            }
           }
-        })),
-
-        barMaxWidth: 40
+        })
       }
     ]
   }

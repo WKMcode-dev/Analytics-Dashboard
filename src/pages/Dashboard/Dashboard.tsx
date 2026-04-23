@@ -1,20 +1,43 @@
-import BarChart from "../components/charts/BarChart"
+// src/pages/Dashboard/Dashboard.tsx
+
+import { useState, useMemo } from "react"
 import { useDashboardData } from "../hooks/useDashboardData"
+import BarChart from "../components/charts/BarChart"
+import FilterModal from "../components/filter_modal/FilterModal"
 
 import "./Dashboard.css"
 
+const getToday = () => {
+  const today = new Date()
+  const offset = today.getTimezoneOffset()
+  const localDate = new Date(today.getTime() - offset * 60 * 1000)
+
+  return localDate.toISOString().split("T")[0]
+}
+
 export default function Dashboard() {
-  const {
-    loading,
-    chartData,
-    selectedDate,
-    setSelectedDate,
-    search,
-    setSearch,
-    prefixo,
-    setPrefixo,
-    prefixosDisponiveis
-  } = useDashboardData()
+  const [date, setDate] = useState(getToday())
+  const [openModal, setOpenModal] = useState(false)
+
+  const { data, loading, filters, setFilters, rawData } =
+    useDashboardData(date)
+
+  // 🔥 extrair opções únicas da API
+  const linhas = useMemo(() => {
+    return [
+      ...new Set(
+        rawData.map((item: any) => item.NumeroLinha).filter(Boolean)
+      )
+    ]
+  }, [rawData])
+
+  const prefixos = useMemo(() => {
+    return [
+      ...new Set(
+        rawData.map((item: any) => item.PrefixoRealizado).filter(Boolean)
+      )
+    ]
+  }, [rawData])
 
   return (
     <div className="dashboard-page">
@@ -24,72 +47,49 @@ export default function Dashboard() {
       <div className="filters">
         <input
           type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
           className="date-filter"
         />
 
-        {selectedDate && (
-          <button
-            className="btn-clear"
-            onClick={() => setSelectedDate("")}
-          >
-            Limpar
-          </button>
-        )}
-
-        <input
-          type="text"
-          placeholder="🔍 Buscar linha, prefixo, motorista..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-filter"
-        />
-        <select
-          value={prefixo}
-          onChange={(e) => setPrefixo(e.target.value)}
-          className="prefix-filter"
+        <button
+          className="btn-clear"
+          onClick={() => setOpenModal(true)}
         >
-          <option value="">🚍 Todos os veículos</option>
-
-          {prefixosDisponiveis.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+          🔎 Filtrar
+        </button>
       </div>
 
-      {/* 📊 CARDS */}
-      <div className="cards">
-        {/* 📊 GRÁFICO PRINCIPAL */}
-        <div className="card card-main">
-          {chartData ? (
-            <BarChart {...chartData} prefixo={prefixo} />
-          ) : (
-            <p className="empty-state">Nenhum dado encontrado</p>
-          )}
-        </div>
+      {/* 📊 CARD */}
+      <div className="card card-main">
+        {data.length > 0 && !loading && (
+          <BarChart data={data} />
+        )}
 
-        {/* 📦 CARDS FUTUROS */}
-        <div className="card">
-          <h3>Mais gráficos</h3>
-          <p>Em breve...</p>
-        </div>
-
-        <div className="card">
-          <h3>Indicadores</h3>
-          <p>Em breve...</p>
-        </div>
+        {!loading && data.length === 0 && (
+          <p>Nenhum dado encontrado</p>
+        )}
       </div>
 
       {/* ⏳ LOADING */}
       {loading && (
         <div className="loading-overlay">
           <div className="spinner"></div>
-          <span>Carregando dados...</span>
+          <span>Carregando...</span>
         </div>
       )}
+
+      {/* 🧠 MODAL */}
+      <FilterModal
+        isOpen={openModal}
+        onClose={() => setOpenModal(false)}
+        onApply={setFilters}
+        initialFilters={filters}
+        options={{
+          linhas,
+          prefixos
+        }}
+      />
     </div>
   )
 }
