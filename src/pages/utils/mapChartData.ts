@@ -16,62 +16,45 @@ export const mapApiToChart = (
 ): ChartItem[] => {
   const { limit = 80, debug = false } = options
 
-  const cleaned = data
-    // 🔥 FILTRO DE VIAGENS VÁLIDAS
-    .filter((item) => {
-      const inicioOk = item.InicioRealizadoText && item.InicioRealizadoText !== "-"
-      const fimOk = item.FimRealizadoText && item.FimRealizadoText !== "-"
+  const cleaned = data.filter((item) => {
+    const inicioOk =
+      item.InicioRealizadoText && item.InicioRealizadoText !== "-"
+    const fimOk =
+      item.FimRealizadoText && item.FimRealizadoText !== "-"
 
-      if (!inicioOk || !fimOk) return false
+    if (!inicioOk || !fimOk) return false
 
-      const kmReal = parseNumber(item.KMRodado)
-      return kmReal > 0
-    })
+    const kmReal = parseNumber(item.KMRodado)
+    return kmReal > 0
+  })
 
   if (debug) {
     console.log("🧹 VIAGENS VÁLIDAS:", cleaned.length)
-
-    console.log("🔍 AMOSTRA (primeiras 5 viagens):")
-    cleaned.slice(0, 5).forEach((item, i) => {
-      console.log(`[${i}]`, {
-        linha: item.NumeroLinha,
-        sentido: item.SentidoText,
-        km: parseNumber(item.KMRodado),
-        inicio: item.InicioRealizadoText,
-        fim: item.FimRealizadoText
-      })
-    })
   }
 
-  // 🔥 LIMITA VISUALIZAÇÃO (evita gráfico lotado)
   const sliced = cleaned.slice(-limit)
 
-  if (debug) {
-    console.log(`📊 EXIBINDO ÚLTIMAS ${limit} VIAGENS`)
-  }
-
-  return sliced.map((item, index) => {
+  return sliced.map((item) => {
     const kmReal = parseNumber(item.KMRodado)
 
     return {
-      // 🔥 IDENTIFICAÇÃO CLARA DA VIAGEM
-      label: `${item.NumeroLinha} (${item.SentidoText}) #${index + 1}`,
+      label: `${item.NumeroLinha} (${item.SentidoText})`,
 
-      // 📊 MÉTRICAS PRINCIPAIS
-      kmProgramado: parseNumber(item.KMProgramado),
+      // 🔥 principal
       kmRealizado: kmReal,
 
-      // 📌 INDICADORES OPERACIONAIS
+      // ⚠️ mantém compatibilidade com o tipo
+      kmProgramado: parseNumber(item.KMProgramado),
       naoCumprida: item.NaoCumprida || 0,
       parcialmenteCumprida: item.ParcialmenteCumprida || 0,
-
       atrasado: (item.AtrasadoInicio || 0) + (item.AtrasadoFim || 0),
       adiantado: (item.AdiantadoInicio || 0) + (item.AdiantadoFim || 0),
 
-      // 🧠 METADADOS (IMPORTANTE PARA DEBUG E FUTURO)
+      // 🔥 meta com prefixo
       meta: {
         linha: item.NumeroLinha,
         sentido: item.SentidoText,
+        prefixo: item.PrefixoRealizado || "-",
         inicio: item.InicioRealizadoText,
         fim: item.FimRealizadoText,
         kmBruto: item.KMRodado

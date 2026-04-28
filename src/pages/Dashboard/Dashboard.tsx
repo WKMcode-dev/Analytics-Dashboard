@@ -15,52 +15,104 @@ const getToday = () => {
   return localDate.toISOString().split("T")[0]
 }
 
+const formatDateBR = (date: string) => {
+  if (!date) return ""
+  const [year, month, day] = date.split("-")
+  return `${day}/${month}/${year}`
+}
+
 export default function Dashboard() {
   const [date, setDate] = useState(getToday())
+  const [tempDate, setTempDate] = useState(getToday()) // 🔥 NOVO
+
   const [openModal, setOpenModal] = useState(false)
 
-  const { data, loading, filters, setFilters, rawData } =
-    useDashboardData(date)
+  const {
+    data,
+    loading,
+    filters,
+    setFilters,
+    rawData,
+    mode,
+    setMode
+  } = useDashboardData(tempDate) // 🔥 USA tempDate
 
-  // 🔥 extrair opções únicas da API
+  const base = rawData
+
+  // 🔥 LINHAS DINÂMICAS
   const linhas = useMemo(() => {
-    return [
-      ...new Set(
-        rawData.map((item: any) => item.NumeroLinha).filter(Boolean)
-      )
-    ]
-  }, [rawData])
+    let filtered = base
 
-  const prefixos = useMemo(() => {
+    if (filters.prefixo) {
+      filtered = filtered.filter(
+        (item: any) =>
+          item.PrefixoRealizado === filters.prefixo ||
+          item.PrefixoPrevisto === filters.prefixo
+      )
+    }
+
     return [
       ...new Set(
-        rawData.map((item: any) => item.PrefixoRealizado).filter(Boolean)
+        filtered.map((item: any) => item.NumeroLinha).filter(Boolean)
       )
-    ]
-  }, [rawData])
+    ].sort()
+  }, [base, filters.prefixo])
+
+  // 🔥 PREFIXOS DINÂMICOS
+  const prefixos = useMemo(() => {
+    let filtered = base
+
+    if (filters.linha) {
+      filtered = filtered.filter(
+        (item: any) => item.NumeroLinha === filters.linha
+      )
+    }
+
+    return [
+      ...new Set(
+        filtered
+          .map((item: any) => item.PrefixoRealizado)
+          .filter(Boolean)
+      )
+    ].sort()
+  }, [base, filters.linha])
 
   return (
     <div className="dashboard-page">
       <h1>Dashboard</h1>
 
-      {/* 🔍 FILTROS */}
       <div className="filters">
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="date-filter"
-        />
-
         <button
           className="btn-clear"
-          onClick={() => setOpenModal(true)}
+          onClick={() => {
+            setTempDate(date) 
+            setOpenModal(true)
+          }}
         >
-          🔎 Filtrar
+          🔎 Filtrar • {formatDateBR(date)}
         </button>
+
+        <div className="mode-toggle">
+          <button
+            className={`btn-clear ${
+              mode === "operacional" ? "active" : ""
+            }`}
+            onClick={() => setMode("operacional")}
+          >
+            Operacional
+          </button>
+
+          <button
+            className={`btn-clear ${
+              mode === "executivo" ? "active" : ""
+            }`}
+            onClick={() => setMode("executivo")}
+          >
+            Executivo
+          </button>
+        </div>
       </div>
 
-      {/* 📊 CARD */}
       <div className="card card-main">
         {data.length > 0 && !loading && (
           <BarChart data={data} />
@@ -71,7 +123,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ⏳ LOADING */}
       {loading && (
         <div className="loading-overlay">
           <div className="spinner"></div>
@@ -79,12 +130,22 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 🧠 MODAL */}
       <FilterModal
         isOpen={openModal}
         onClose={() => setOpenModal(false)}
-        onApply={setFilters}
+
+        // 🔥 AGORA TEM LIVE UPDATE
+        onDateChange={setTempDate}
+
+        onApply={(newFilters: any, newDate: string) => {
+          setFilters(newFilters)
+          setDate(newDate)
+          setTempDate(newDate) // 🔥 mantém sincronizado
+        }}
+
         initialFilters={filters}
+        initialDate={tempDate} // 🔥 usa tempDate
+
         options={{
           linhas,
           prefixos

@@ -1,4 +1,4 @@
-// src\types\ChartItem.ts
+// src/types/ChartItem.ts
 
 export type ChartItem = {
   label: string
@@ -11,4 +11,13 @@ export type ChartItem = {
 
   atrasado: number
   adiantado: number
+
+  meta: {
+    linha: string
+    sentido: string
+    prefixo?: string
+    inicio?: string
+    fim?: string
+    kmBruto?: string
+  }
 }

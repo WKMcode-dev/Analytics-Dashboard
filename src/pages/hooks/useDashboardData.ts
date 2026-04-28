@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react"
 import { fetchDashboardData } from "../../services/api"
 import { mapApiToChart } from "../utils/mapChartData"
+import { mapExecutiveData } from "../utils/mapExecutiveData"
 import type { ChartItem } from "../../types/ChartItem"
+
+type Mode = "operacional" | "executivo"
 
 type Filters = {
   linha: string
@@ -11,10 +14,26 @@ type Filters = {
   sentido: "" | "IDA" | "VOLTA"
 }
 
+// 🔥 helper de data (ESSENCIAL)
+const extractDate = (value: string) => {
+  if (!value) return ""
+
+  try {
+    const [date] = value.split(" ")
+    const [day, month, year] = date.split("/")
+
+    return `${year}-${month}-${day}`
+  } catch {
+    return ""
+  }
+}
+
 export function useDashboardData(date: string) {
   const [rawData, setRawData] = useState<any[]>([])
   const [data, setData] = useState<ChartItem[]>([])
   const [loading, setLoading] = useState(false)
+
+  const [mode, setMode] = useState<Mode>("operacional")
 
   const [filters, setFilters] = useState<Filters>({
     linha: "",
@@ -22,7 +41,7 @@ export function useDashboardData(date: string) {
     sentido: ""
   })
 
-  // 🔄 API
+  // 🔄 API + FILTRO REAL POR DATA
   useEffect(() => {
     if (!date) return
 
@@ -31,11 +50,36 @@ export function useDashboardData(date: string) {
 
       try {
         const apiData = await fetchDashboardData(date)
-        setRawData(apiData)
 
-        console.log("📦 RAW DA API:", apiData.length, "registros")
+        console.log("📦 RAW DA API:", apiData.length)
+
+        // 🔥 FILTRO REAL (RESOLVE O BUG)
+        const filteredByDate = apiData.filter((item: any) => {
+          const rawDate =
+            item.InicioRealizado || item.InicioPrevisto
+
+          if (!rawDate) return false
+
+          const itemDate = extractDate(rawDate)
+
+          if (itemDate !== date) return false
+
+          const km = parseFloat(item.KMRodado?.replace(",", ".") || "0")
+
+          if (km <= 0) return false
+
+          return true
+        })
+
+        console.log(
+          "📅 APÓS FILTRO DE DATA:",
+          filteredByDate.length
+        )
+
+        setRawData(filteredByDate)
       } catch (err) {
         console.error("❌ erro API:", err)
+        setRawData([])
       } finally {
         setLoading(false)
       }
@@ -44,69 +88,71 @@ export function useDashboardData(date: string) {
     load()
   }, [date])
 
-  // 🔍 FILTROS + MAP
+  // 🔍 FILTROS + PROCESSAMENTO
   useEffect(() => {
-    if (!rawData.length) return
+    if (!rawData.length) {
+      setData([])
+      return
+    }
 
     let filtered = [...rawData]
 
-    // 🔎 filtro linha
+    // 🔎 linha
     if (filters.linha) {
-      const s = filters.linha.toLowerCase()
-
-      filtered = filtered.filter((item) =>
-        item.NomeLinha?.toLowerCase().includes(s) ||
-        item.NumeroLinha?.toLowerCase().includes(s)
+      filtered = filtered.filter(
+        (item) => item.NumeroLinha === filters.linha
       )
     }
 
-    // 🔎 filtro prefixo
+    // 🔎 prefixo
     if (filters.prefixo) {
-      const s = filters.prefixo.toLowerCase()
-
-      filtered = filtered.filter((item) =>
-        item.PrefixoRealizado?.toLowerCase().includes(s) ||
-        item.PrefixoPrevisto?.toLowerCase().includes(s)
+      filtered = filtered.filter(
+        (item) =>
+          item.PrefixoRealizado === filters.prefixo ||
+          item.PrefixoPrevisto === filters.prefixo
       )
     }
 
-    // 🔎 filtro sentido
+    // 🔎 sentido
     if (filters.sentido) {
       filtered = filtered.filter(
         (item) => item.SentidoText === filters.sentido
       )
     }
 
-    console.log("🧹 FILTRADO:", filtered.length, "registros")
+    console.log("🧹 FILTRADO FINAL:", filtered.length)
 
-    // 🔍 DEBUG AMOSTRAL (OK manter)
-    console.log("🔍 AMOSTRA DOS DADOS (primeiros 5):")
-    filtered.slice(0, 5).forEach((item, index) => {
-      console.log(`[${index}]`, {
-        linha: item.NumeroLinha,
-        sentido: item.SentidoText,
-        km: parseFloat(item.KMRodado?.replace(",", ".") || "0"),
-        inicio: item.InicioRealizadoText,
-        fim: item.FimRealizadoText
-      })
+    // 🔵 operacional (limitado)
+    const operational = mapApiToChart(filtered, {
+      limit: 80
     })
 
-    // 🚀 MAP CORRETO (VIAGENS + LIMITE)
-    const mapped = mapApiToChart(filtered, {
-      limit: 80,
-      debug: false
+    // 🟣 executivo (SEM LIMITAÇÃO)
+    const fullData = mapApiToChart(filtered, {
+      limit: 9999
     })
 
-    console.log("📊 VIAGENS EXIBIDAS:", mapped.length)
+    const executive = mapExecutiveData(fullData)
 
-    setData(mapped)
-  }, [rawData, filters])
+    const finalData =
+      mode === "operacional" ? operational : executive
+
+    console.log(
+      `📊 MODO: ${mode} | ITENS:`,
+      finalData.length
+    )
+
+    setData(finalData)
+  }, [rawData, filters, mode])
 
   return {
     data,
     loading,
     filters,
     setFilters,
-    rawData
+    rawData,
+    processedData: data,
+    mode,
+    setMode
   }
 }
